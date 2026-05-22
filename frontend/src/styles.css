@@ -120,6 +120,7 @@ h2 {
 }
 
 .location-field,
+.auth-panel,
 .command-bar,
 .voice-console,
 .restaurant-card,
@@ -138,6 +139,70 @@ h2 {
   gap: 8px;
   padding: 10px 12px;
   min-width: 190px;
+}
+
+.location-button,
+.auth-panel button,
+.signed-in button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #d9d4ca;
+  border-radius: 8px;
+  background: #fffdf8;
+  color: #18201f;
+  padding: 10px 12px;
+  font-weight: 800;
+}
+
+.auth-panel {
+  padding: 14px;
+}
+
+.auth-panel form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 10px;
+}
+
+.auth-panel input {
+  min-width: 0;
+  border: 1px solid #d9d4ca;
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px 12px;
+  outline: 0;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.auth-tabs button.active {
+  border-color: #0d7a5f;
+  color: #0d7a5f;
+  background: #eefaf6;
+}
+
+.signed-in {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.signed-in div {
+  display: grid;
+  gap: 3px;
+}
+
+.signed-in span,
+.address {
+  color: #746d63;
+  font-size: 0.88rem;
 }
 
 .location-field input,
@@ -343,6 +408,10 @@ h2 {
   font-size: 0.9rem;
 }
 
+.address {
+  margin-bottom: 6px;
+}
+
 .meta span {
   display: inline-flex;
   align-items: center;
@@ -510,6 +579,10 @@ h2 {
 
   .connection-pill {
     justify-content: center;
+  }
+
+  .auth-panel form {
+    grid-template-columns: 1fr;
   }
 
   .location-field {

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3, IndianRupee, MapPin, Mic, MicOff, Plus, RefreshCw, Send, ShoppingBag, Sparkles, Trash2, Utensils, Wifi } from "lucide-react";
-import { checkout, createSession, getHealth, sendCommand } from "./api";
-import { CheckoutOrder, OrderSession, Restaurant } from "./types";
+import { CheckCircle2, Clock3, IndianRupee, LocateFixed, LogIn, MapPin, Mic, MicOff, Plus, RefreshCw, Send, ShoppingBag, Sparkles, Trash2, UserPlus, Utensils, Wifi } from "lucide-react";
+import { checkout, createSession, getHealth, sendCommand, signin, signup } from "./api";
+import { CheckoutOrder, OrderSession, Restaurant, User } from "./types";
 import { useVoice } from "./useVoice";
 
 const examples = ["search biryani on Swiggy", "add two masala dosa", "choose Pizza Yard", "checkout"];
@@ -9,6 +9,8 @@ type ConnectionState = "checking" | "online" | "offline";
 
 export function App() {
   const [location, setLocation] = useState("Bengaluru");
+  const [latitude, setLatitude] = useState<number | undefined>();
+  const [longitude, setLongitude] = useState<number | undefined>();
   const [session, setSession] = useState<OrderSession | null>(null);
   const [command, setCommand] = useState("");
   const [messages, setMessages] = useState<string[]>(["Tell me what you want to eat."]);
@@ -18,12 +20,18 @@ export function App() {
   const [error, setError] = useState("");
   const [connection, setConnection] = useState<ConnectionState>("checking");
   const [providerMode, setProviderMode] = useState("mock");
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem("food-agent-user");
+    return saved ? (JSON.parse(saved) as User) : null;
+  });
+  const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
 
-  async function bootSession(currentLocation = location) {
+  async function bootSession(currentLocation = location, nextLatitude = latitude, nextLongitude = longitude, nextUser = user) {
     setConnection("checking");
     setError("");
     try {
-      const [health, created] = await Promise.all([getHealth(), createSession(currentLocation)]);
+      const [health, created] = await Promise.all([getHealth(), createSession(currentLocation, nextLatitude, nextLongitude, nextUser?.id)]);
       setConnection(health.ok ? "online" : "offline");
       setProviderMode(health.mode);
       setSession(created.session);
@@ -42,7 +50,7 @@ export function App() {
     setOrder(null);
     setMessages((items) => [...items, `You: ${clean}`]);
     try {
-      const result = await sendCommand(session?.id, clean, location);
+      const result = await sendCommand(session?.id, clean, location, latitude, longitude, user?.id);
       setSession(result.session);
       setMessages((items) => [...items, `Agent: ${result.message}`]);
       setSuggestions(result.suggestions.length ? result.suggestions : examples);
@@ -61,6 +69,58 @@ export function App() {
   useEffect(() => {
     void bootSession();
   }, []);
+
+  async function submitAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const result =
+        authMode === "signup"
+          ? await signup(authForm.name, authForm.email, authForm.password)
+          : await signin(authForm.email, authForm.password);
+      setUser(result.user);
+      localStorage.setItem("food-agent-user", JSON.stringify(result.user));
+      setMessages((items) => [...items, `Agent: Signed in as ${result.user.name}.`]);
+      await bootSession(location, latitude, longitude, result.user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function signOut() {
+    localStorage.removeItem("food-agent-user");
+    setUser(null);
+    setMessages((items) => [...items, "Agent: Signed out."]);
+    void bootSession(location, latitude, longitude, null);
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      setError("Your browser does not support location access.");
+      return;
+    }
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextLatitude = position.coords.latitude;
+        const nextLongitude = position.coords.longitude;
+        setLatitude(nextLatitude);
+        setLongitude(nextLongitude);
+        setLocation("Current location");
+        setMessages((items) => [...items, "Agent: Location detected. Restaurants are now sorted by distance."]);
+        void bootSession("Current location", nextLatitude, nextLongitude);
+        setLoading(false);
+      },
+      () => {
+        setError("Location permission denied. Enter your area manually or allow location access.");
+        setLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   const subtotal = useMemo(() => {
     return session?.cart.reduce((sum, item) => sum + item.price * item.quantity, 0) ?? 0;
@@ -103,8 +163,36 @@ export function App() {
               <MapPin size={17} />
               <input value={location} onChange={(event) => setLocation(event.target.value)} onBlur={() => void bootSession(location)} aria-label="Delivery location" />
             </label>
+            <button className="location-button" onClick={useCurrentLocation} disabled={loading}>
+              <LocateFixed size={16} /> Use live location
+            </button>
           </div>
         </header>
+
+        <section className="auth-panel">
+          {user ? (
+            <div className="signed-in">
+              <div>
+                <strong>{user.name}</strong>
+                <span>{user.email}</span>
+              </div>
+              <button onClick={signOut}>Sign out</button>
+            </div>
+          ) : (
+            <form onSubmit={submitAuth}>
+              <div className="auth-tabs">
+                <button type="button" className={authMode === "signin" ? "active" : ""} onClick={() => setAuthMode("signin")}><LogIn size={15} /> Sign in</button>
+                <button type="button" className={authMode === "signup" ? "active" : ""} onClick={() => setAuthMode("signup")}><UserPlus size={15} /> Sign up</button>
+              </div>
+              {authMode === "signup" && (
+                <input value={authForm.name} onChange={(event) => setAuthForm({ ...authForm, name: event.target.value })} placeholder="Name" />
+              )}
+              <input value={authForm.email} onChange={(event) => setAuthForm({ ...authForm, email: event.target.value })} placeholder="Email" type="email" />
+              <input value={authForm.password} onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })} placeholder="Password" type="password" />
+              <button type="submit" disabled={loading}>{authMode === "signup" ? "Create account" : "Sign in"}</button>
+            </form>
+          )}
+        </section>
 
         <div className="voice-console">
           <button className={`mic-button ${voice.listening ? "recording" : ""}`} onClick={voice.listening ? voice.stop : voice.start} disabled={!voice.supported || loading || connection !== "online"}>
@@ -112,7 +200,7 @@ export function App() {
           </button>
           <div>
             <p className="status">{loading ? "Agent is working..." : voice.supported ? (voice.listening ? "Listening..." : "Tap the mic or type a command") : "Voice unavailable in this browser"}</p>
-            <p className="transcript">{voice.interimText || (connection === "online" ? "Try: add two chicken biryani from Swiggy" : "Reconnect to continue ordering")}</p>
+            <p className="transcript">{voice.interimText || (connection === "online" ? "Try: search nearest biryani, add one, then say place order" : "Reconnect to continue ordering")}</p>
           </div>
         </div>
 
@@ -200,9 +288,11 @@ function RestaurantCard({ restaurant, selected, disabled, onCommand }: { restaur
       </div>
       <div className="meta">
         <span>{restaurant.rating} rating</span>
+        {typeof restaurant.distanceKm === "number" && <span>{restaurant.distanceKm.toFixed(1)} km away</span>}
         <span><Clock3 size={14} /> {restaurant.etaMinutes} min</span>
         <span><IndianRupee size={14} /> {restaurant.deliveryFee} fee</span>
       </div>
+      <p className="address">{restaurant.address}</p>
       <p>{restaurant.cuisine.join(" - ")}</p>
       <div className="menu-list">
         {restaurant.menu.map((item) => (

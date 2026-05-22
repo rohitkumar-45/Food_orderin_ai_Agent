@@ -13,8 +13,12 @@ type SpeechRecognition = EventTarget & {
   onerror: (() => void) | null;
 };
 
+type SpeechRecognitionResult = ArrayLike<{ transcript: string }> & {
+  isFinal: boolean;
+};
+
 type SpeechRecognitionEvent = {
-  results: ArrayLike<ArrayLike<{ transcript: string; isFinal?: boolean }>>;
+  results: ArrayLike<SpeechRecognitionResult>;
 };
 
 declare global {
@@ -52,12 +56,16 @@ export function useVoice(onFinalTranscript: (text: string) => void) {
       let finalText = "";
       let interim = "";
       for (let index = 0; index < event.results.length; index += 1) {
-        const result = event.results[index][0];
-        if (result.isFinal) finalText += result.transcript;
-        else interim += result.transcript;
+        const result = event.results[index];
+        const transcript = result[0]?.transcript ?? "";
+        if (result.isFinal) finalText += transcript;
+        else interim += transcript;
       }
       setInterimText(interim);
-      if (finalText.trim()) callbackRef.current(finalText.trim());
+      if (finalText.trim()) {
+        setInterimText("");
+        callbackRef.current(finalText.trim());
+      }
     };
     recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);

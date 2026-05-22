@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { createCheckout, createSession, getSession, handleCommand } from "./agent/orderAgent.js";
+import { signin, signup } from "./auth/userStore.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 8080);
@@ -20,8 +21,44 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.post("/api/session", (req, res) => {
-  const body = z.object({ location: z.string().optional() }).parse(req.body ?? {});
-  res.json({ session: createSession(body.location) });
+  const body = z
+    .object({
+      location: z.string().optional(),
+      latitude: z.number().optional(),
+      longitude: z.number().optional(),
+      userId: z.string().optional()
+    })
+    .parse(req.body ?? {});
+  res.json({ session: createSession(body.location, body.latitude, body.longitude, body.userId) });
+});
+
+app.post("/api/auth/signup", (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        name: z.string().min(2),
+        email: z.string().email(),
+        password: z.string().min(6)
+      })
+      .parse(req.body);
+    res.json({ user: signup(body.name, body.email, body.password) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/auth/signin", (req, res, next) => {
+  try {
+    const body = z
+      .object({
+        email: z.string().email(),
+        password: z.string().min(1)
+      })
+      .parse(req.body);
+    res.json({ user: signin(body.email, body.password) });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get("/api/session/:id", (req, res) => {
@@ -36,11 +73,14 @@ app.post("/api/agent/command", async (req, res, next) => {
       .object({
         sessionId: z.string().optional(),
         command: z.string().min(1),
-        location: z.string().optional()
+        location: z.string().optional(),
+        latitude: z.number().optional(),
+        longitude: z.number().optional(),
+        userId: z.string().optional()
       })
       .parse(req.body);
 
-    res.json(await handleCommand(body.sessionId, body.command, body.location));
+    res.json(await handleCommand(body.sessionId, body.command, body.location, body.latitude, body.longitude, body.userId));
   } catch (error) {
     next(error);
   }

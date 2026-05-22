@@ -9,6 +9,9 @@ export const restaurants: Restaurant[] = [
     rating: 4.5,
     etaMinutes: 28,
     deliveryFee: 39,
+    address: "Koramangala 5th Block, Bengaluru",
+    latitude: 12.9352,
+    longitude: 77.6245,
     menu: [
       {
         id: "chicken-biryani",
@@ -36,6 +39,9 @@ export const restaurants: Restaurant[] = [
     rating: 4.3,
     etaMinutes: 34,
     deliveryFee: 29,
+    address: "Indiranagar 100 Feet Road, Bengaluru",
+    latitude: 12.9784,
+    longitude: 77.6408,
     menu: [
       {
         id: "margherita",
@@ -63,6 +69,9 @@ export const restaurants: Restaurant[] = [
     rating: 4.6,
     etaMinutes: 22,
     deliveryFee: 25,
+    address: "Jayanagar 4th Block, Bengaluru",
+    latitude: 12.925,
+    longitude: 77.5938,
     menu: [
       {
         id: "masala-dosa",
@@ -90,6 +99,9 @@ export const restaurants: Restaurant[] = [
     rating: 4.4,
     etaMinutes: 31,
     deliveryFee: 35,
+    address: "HSR Layout Sector 2, Bengaluru",
+    latitude: 12.9116,
+    longitude: 77.6389,
     menu: [
       {
         id: "veg-thali",

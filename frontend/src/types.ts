@@ -17,6 +17,10 @@ export type Restaurant = {
   rating: number;
   etaMinutes: number;
   deliveryFee: number;
+  address: string;
+  latitude: number;
+  longitude: number;
+  distanceKm?: number;
   menu: MenuItem[];
 };
 
@@ -31,7 +35,10 @@ export type CartItem = {
 
 export type OrderSession = {
   id: string;
+  userId?: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   providerPreference: ProviderName | "best";
   restaurants: Restaurant[];
   selectedRestaurantId?: string;
@@ -57,4 +64,10 @@ export type CheckoutOrder = {
   total: number;
   status: "draft" | "placed";
   etaMinutes: number;
+};
+
+export type User = {
+  id: string;
+  name: string;
+  email: string;
 };

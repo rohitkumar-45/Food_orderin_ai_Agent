@@ -6,10 +6,13 @@ import { parseCommand } from "./commandParser.js";
 const sessions = new Map<string, OrderSession>();
 const orders = new Map<string, CheckoutOrder>();
 
-export function createSession(location = "Bengaluru"): OrderSession {
+export function createSession(location = "Bengaluru", latitude?: number, longitude?: number, userId?: string): OrderSession {
   const session: OrderSession = {
     id: nanoid(),
+    userId,
     location,
+    latitude,
+    longitude,
     providerPreference: "best",
     restaurants: [],
     cart: [],
@@ -23,15 +26,25 @@ export function getSession(sessionId: string): OrderSession | undefined {
   return sessions.get(sessionId);
 }
 
-export async function handleCommand(sessionId: string | undefined, command: string, location?: string): Promise<AgentResponse> {
-  const session = sessionId ? sessions.get(sessionId) ?? createSession(location) : createSession(location);
+export async function handleCommand(
+  sessionId: string | undefined,
+  command: string,
+  location?: string,
+  latitude?: number,
+  longitude?: number,
+  userId?: string
+): Promise<AgentResponse> {
+  const session = sessionId ? sessions.get(sessionId) ?? createSession(location, latitude, longitude, userId) : createSession(location, latitude, longitude, userId);
   if (location) session.location = location;
+  if (typeof latitude === "number") session.latitude = latitude;
+  if (typeof longitude === "number") session.longitude = longitude;
+  if (userId) session.userId = userId;
 
   const parsed = parseCommand(command);
   session.providerPreference = parsed.providerPreference;
 
   if (parsed.intent === "clear") {
-    const fresh = createSession(session.location);
+    const fresh = createSession(session.location, session.latitude, session.longitude, session.userId);
     return respond(fresh, "Cart cleared. What should I search for now?", ["veg thali", "chicken biryani", "masala dosa"]);
   }
 
@@ -67,7 +80,7 @@ export async function handleCommand(sessionId: string | undefined, command: stri
       return respond(session, `Added ${added.quantity} x ${added.name} from ${added.provider}.`, ["checkout", "add another item", "search desserts"], session.cart.length > 0);
     }
 
-    const searched = await searchRestaurants(parsed.query, session.location, parsed.providerPreference);
+    const searched = await searchRestaurants(parsed.query, session.location, parsed.providerPreference, session.latitude, session.longitude);
     session.restaurants = searched;
     const autoAdded = addItem(session, parsed.query, parsed.quantity);
     if (autoAdded) {
@@ -76,11 +89,11 @@ export async function handleCommand(sessionId: string | undefined, command: stri
     return respond(session, "I found options, but could not identify the exact item to add. Pick a restaurant or item.", suggestionsFromRestaurants(searched));
   }
 
-  const restaurants = await searchRestaurants(parsed.query, session.location, parsed.providerPreference);
+  const restaurants = await searchRestaurants(parsed.query, session.location, parsed.providerPreference, session.latitude, session.longitude);
   session.restaurants = restaurants;
   session.selectedRestaurantId = restaurants[0]?.id;
   const message = restaurants.length
-    ? `Found ${restaurants.length} option${restaurants.length === 1 ? "" : "s"}. Best match is ${restaurants[0].name} on ${restaurants[0].provider}.`
+    ? `Found ${restaurants.length} option${restaurants.length === 1 ? "" : "s"}. Nearest best match is ${restaurants[0].name} on ${restaurants[0].provider}${restaurants[0].distanceKm ? `, ${restaurants[0].distanceKm.toFixed(1)} km away` : ""}.`
     : "No matches found. Try another dish or cuisine.";
 
   return respond(session, message, suggestionsFromRestaurants(restaurants), session.cart.length > 0);
@@ -90,6 +103,9 @@ export function createCheckout(sessionId: string): CheckoutOrder {
   const session = sessions.get(sessionId);
   if (!session || session.cart.length === 0) {
     throw new Error("Cart is empty or session does not exist.");
+  }
+  if (!session.userId) {
+    throw new Error("Please sign in before placing an order.");
   }
 
   const restaurant = session.restaurants.find((item) => item.id === session.cart[0].restaurantId);
@@ -118,10 +134,43 @@ function respond(session: OrderSession, message: string, suggestions: string[], 
   return { session, message, suggestions, checkoutReady };
 }
 
-async function searchRestaurants(query: string, location: string, providerPreference: ProviderName | "best"): Promise<Restaurant[]> {
+async function searchRestaurants(query: string, location: string, providerPreference: ProviderName | "best", latitude?: number, longitude?: number): Promise<Restaurant[]> {
   const activeProviders: ProviderName[] = providerPreference === "best" ? ["swiggy", "zomato"] : [providerPreference];
   const results = await Promise.all(activeProviders.map((provider) => providers[provider].search(query, location)));
-  return results.flat().sort((a, b) => b.rating - a.rating || a.deliveryFee - b.deliveryFee);
+  return results
+    .flat()
+    .map((restaurant) => withDistance(restaurant, latitude, longitude))
+    .sort((a, b) => {
+      if (typeof a.distanceKm === "number" && typeof b.distanceKm === "number") {
+        return a.distanceKm - b.distanceKm || b.rating - a.rating;
+      }
+      return b.rating - a.rating || a.deliveryFee - b.deliveryFee;
+    });
+}
+
+function withDistance(restaurant: Restaurant, latitude?: number, longitude?: number): Restaurant {
+  if (typeof latitude !== "number" || typeof longitude !== "number") return restaurant;
+  const distanceKm = getDistanceKm(latitude, longitude, restaurant.latitude, restaurant.longitude);
+  return {
+    ...restaurant,
+    distanceKm,
+    etaMinutes: Math.max(15, Math.round(12 + distanceKm * 4)),
+    deliveryFee: Math.max(20, Math.round(18 + distanceKm * 7))
+  };
+}
+
+function getDistanceKm(fromLat: number, fromLon: number, toLat: number, toLon: number): number {
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(toLat - fromLat);
+  const dLon = toRadians(toLon - fromLon);
+  const lat1 = toRadians(fromLat);
+  const lat2 = toRadians(toLat);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function toRadians(value: number): number {
+  return (value * Math.PI) / 180;
 }
 
 function findRestaurant(restaurants: Restaurant[], query: string): Restaurant | undefined {
