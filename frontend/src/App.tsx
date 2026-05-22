@@ -28,6 +28,9 @@ export function App() {
       setSession(result.session);
       setMessages((items) => [...items, `Agent: ${result.message}`]);
       setSuggestions(result.suggestions.length ? result.suggestions : examples);
+      if (shouldPlaceOrder(clean) && result.session.cart.length > 0) {
+        await placeOrder(result.session.id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -53,12 +56,12 @@ export function App() {
     setCommand("");
   }
 
-  async function placeOrder() {
-    if (!session) return;
+  async function placeOrder(sessionId = session?.id) {
+    if (!sessionId) return;
     setLoading(true);
     setError("");
     try {
-      const result = await checkout(session.id);
+      const result = await checkout(sessionId);
       setOrder(result.order);
       setMessages((items) => [...items, `Agent: Order ${result.order.id} placed on ${result.order.provider}.`]);
     } catch (err) {
@@ -137,21 +140,21 @@ export function App() {
             <div className="cart-item" key={`${item.restaurantId}-${item.itemId}`}>
               <div>
                 <strong>{item.quantity} x {item.name}</strong>
-                <span>{item.provider} · Rs {item.price} each</span>
+                <span>{item.provider} - Rs {item.price} each</span>
               </div>
               <button aria-label={`Remove ${item.name}`} onClick={() => submitCommand(`remove ${item.name}`)}><Trash2 size={16} /></button>
             </div>
           ))}
           {session?.cart.length === 0 && <p className="muted">Add items by voice or command.</p>}
         </div>
-        <button className="checkout-button" onClick={placeOrder} disabled={loading || !session?.cart.length}>
+        <button className="checkout-button" onClick={() => placeOrder()} disabled={loading || !session?.cart.length}>
           <CheckCircle2 size={18} /> Place order
         </button>
         {order && (
           <div className="order-card">
             <strong>Order placed</strong>
-            <span>{order.id} · {order.restaurantName}</span>
-            <span>ETA {order.etaMinutes} min · Total Rs {order.total}</span>
+            <span>{order.id} - {order.restaurantName}</span>
+            <span>ETA {order.etaMinutes} min - Total Rs {order.total}</span>
           </div>
         )}
       </aside>
@@ -174,7 +177,7 @@ function RestaurantCard({ restaurant, selected, onCommand }: { restaurant: Resta
         <span><Clock3 size={14} /> {restaurant.etaMinutes} min</span>
         <span><IndianRupee size={14} /> {restaurant.deliveryFee} fee</span>
       </div>
-      <p>{restaurant.cuisine.join(" · ")}</p>
+      <p>{restaurant.cuisine.join(" - ")}</p>
       <div className="menu-list">
         {restaurant.menu.map((item) => (
           <button key={item.id} onClick={() => onCommand(`add ${item.name}`)}>
@@ -185,4 +188,8 @@ function RestaurantCard({ restaurant, selected, onCommand }: { restaurant: Resta
       </div>
     </article>
   );
+}
+
+function shouldPlaceOrder(command: string) {
+  return /\b(place order|confirm order|order now)\b/i.test(command);
 }
