@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3, IndianRupee, MapPin, Mic, MicOff, Plus, Send, ShoppingBag, Sparkles, Trash2, Utensils } from "lucide-react";
-import { checkout, createSession, sendCommand } from "./api";
+import { CheckCircle2, Clock3, IndianRupee, MapPin, Mic, MicOff, Plus, RefreshCw, Send, ShoppingBag, Sparkles, Trash2, Utensils, Wifi } from "lucide-react";
+import { checkout, createSession, getHealth, sendCommand } from "./api";
 import { CheckoutOrder, OrderSession, Restaurant } from "./types";
 import { useVoice } from "./useVoice";
 
 const examples = ["search biryani on Swiggy", "add two masala dosa", "choose Pizza Yard", "checkout"];
+type ConnectionState = "checking" | "online" | "offline";
 
 export function App() {
   const [location, setLocation] = useState("Bengaluru");
@@ -15,10 +16,27 @@ export function App() {
   const [order, setOrder] = useState<CheckoutOrder | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [connection, setConnection] = useState<ConnectionState>("checking");
+  const [providerMode, setProviderMode] = useState("mock");
+
+  async function bootSession(currentLocation = location) {
+    setConnection("checking");
+    setError("");
+    try {
+      const [health, created] = await Promise.all([getHealth(), createSession(currentLocation)]);
+      setConnection(health.ok ? "online" : "offline");
+      setProviderMode(health.mode);
+      setSession(created.session);
+      setMessages((items) => [...items, "Agent: Connected to the ordering backend."]);
+    } catch (err) {
+      setConnection("offline");
+      setError(err instanceof Error ? `Backend connection failed: ${err.message}` : "Backend connection failed");
+    }
+  }
 
   const submitCommand = async (text: string) => {
     const clean = text.trim();
-    if (!clean) return;
+    if (!clean || loading || connection === "offline") return;
     setLoading(true);
     setError("");
     setOrder(null);
@@ -41,9 +59,7 @@ export function App() {
   const voice = useVoice(submitCommand);
 
   useEffect(() => {
-    createSession(location)
-      .then(({ session: nextSession }) => setSession(nextSession))
-      .catch((err) => setError(err instanceof Error ? err.message : "Could not start session"));
+    void bootSession();
   }, []);
 
   const subtotal = useMemo(() => {
@@ -79,32 +95,42 @@ export function App() {
             <div className="eyebrow"><Sparkles size={15} /> Voice food ordering agent</div>
             <h1>Order across Swiggy and Zomato</h1>
           </div>
-          <label className="location-field">
-            <MapPin size={17} />
-            <input value={location} onChange={(event) => setLocation(event.target.value)} aria-label="Delivery location" />
-          </label>
+          <div className="topbar-actions">
+            <span className={`connection-pill ${connection}`}>
+              <Wifi size={15} /> {connection === "online" ? `Backend online - ${providerMode}` : connection === "checking" ? "Connecting..." : "Backend offline"}
+            </span>
+            <label className="location-field">
+              <MapPin size={17} />
+              <input value={location} onChange={(event) => setLocation(event.target.value)} onBlur={() => void bootSession(location)} aria-label="Delivery location" />
+            </label>
+          </div>
         </header>
 
         <div className="voice-console">
-          <button className={`mic-button ${voice.listening ? "recording" : ""}`} onClick={voice.listening ? voice.stop : voice.start} disabled={!voice.supported}>
+          <button className={`mic-button ${voice.listening ? "recording" : ""}`} onClick={voice.listening ? voice.stop : voice.start} disabled={!voice.supported || loading || connection !== "online"}>
             {voice.listening ? <MicOff size={30} /> : <Mic size={30} />}
           </button>
           <div>
-            <p className="status">{voice.supported ? (voice.listening ? "Listening..." : "Tap the mic or type a command") : "Voice unavailable in this browser"}</p>
-            <p className="transcript">{voice.interimText || "Try: add two chicken biryani from Swiggy"}</p>
+            <p className="status">{loading ? "Agent is working..." : voice.supported ? (voice.listening ? "Listening..." : "Tap the mic or type a command") : "Voice unavailable in this browser"}</p>
+            <p className="transcript">{voice.interimText || (connection === "online" ? "Try: add two chicken biryani from Swiggy" : "Reconnect to continue ordering")}</p>
           </div>
         </div>
 
         <form className="command-bar" onSubmit={onSubmit}>
-          <input value={command} onChange={(event) => setCommand(event.target.value)} placeholder="Search, add items, choose restaurants, checkout..." />
-          <button type="submit" disabled={loading || !command.trim()}><Send size={18} /> Send</button>
+          <input value={command} onChange={(event) => setCommand(event.target.value)} placeholder="Search, add items, choose restaurants, checkout..." disabled={connection !== "online"} />
+          <button type="submit" disabled={loading || !command.trim() || connection !== "online"}><Send size={18} /> Send</button>
         </form>
 
-        {error && <div className="error">{error}</div>}
+        {error && (
+          <div className="error">
+            <span>{error}</span>
+            <button onClick={() => void bootSession()}><RefreshCw size={15} /> Retry</button>
+          </div>
+        )}
 
         <div className="suggestions">
           {suggestions.map((item) => (
-            <button key={item} onClick={() => submitCommand(item)}>{item}</button>
+            <button key={item} onClick={() => submitCommand(item)} disabled={loading || connection !== "online"}>{item}</button>
           ))}
         </div>
 
@@ -122,7 +148,7 @@ export function App() {
         </div>
         <div className="restaurants">
           {(session?.restaurants ?? []).map((restaurant) => (
-            <RestaurantCard key={restaurant.id} restaurant={restaurant} selected={session?.selectedRestaurantId === restaurant.id} onCommand={submitCommand} />
+            <RestaurantCard key={restaurant.id} restaurant={restaurant} selected={session?.selectedRestaurantId === restaurant.id} disabled={loading || connection !== "online"} onCommand={submitCommand} />
           ))}
           {session?.restaurants.length === 0 && (
             <div className="empty-state"><Utensils size={24} /> Search a dish or cuisine to compare provider options.</div>
@@ -142,7 +168,7 @@ export function App() {
                 <strong>{item.quantity} x {item.name}</strong>
                 <span>{item.provider} - Rs {item.price} each</span>
               </div>
-              <button aria-label={`Remove ${item.name}`} onClick={() => submitCommand(`remove ${item.name}`)}><Trash2 size={16} /></button>
+              <button aria-label={`Remove ${item.name}`} onClick={() => submitCommand(`remove ${item.name}`)} disabled={loading || connection !== "online"}><Trash2 size={16} /></button>
             </div>
           ))}
           {session?.cart.length === 0 && <p className="muted">Add items by voice or command.</p>}
@@ -162,7 +188,7 @@ export function App() {
   );
 }
 
-function RestaurantCard({ restaurant, selected, onCommand }: { restaurant: Restaurant; selected: boolean; onCommand: (command: string) => void }) {
+function RestaurantCard({ restaurant, selected, disabled, onCommand }: { restaurant: Restaurant; selected: boolean; disabled: boolean; onCommand: (command: string) => void }) {
   return (
     <article className={`restaurant-card ${selected ? "selected" : ""}`}>
       <div className="restaurant-head">
@@ -170,7 +196,7 @@ function RestaurantCard({ restaurant, selected, onCommand }: { restaurant: Resta
           <span className={`provider ${restaurant.provider}`}>{restaurant.provider}</span>
           <h3>{restaurant.name}</h3>
         </div>
-        <button onClick={() => onCommand(`choose ${restaurant.name}`)} title={`Choose ${restaurant.name}`}><Plus size={17} /></button>
+        <button onClick={() => onCommand(`choose ${restaurant.name}`)} title={`Choose ${restaurant.name}`} disabled={disabled}><Plus size={17} /></button>
       </div>
       <div className="meta">
         <span>{restaurant.rating} rating</span>
@@ -180,7 +206,7 @@ function RestaurantCard({ restaurant, selected, onCommand }: { restaurant: Resta
       <p>{restaurant.cuisine.join(" - ")}</p>
       <div className="menu-list">
         {restaurant.menu.map((item) => (
-          <button key={item.id} onClick={() => onCommand(`add ${item.name}`)}>
+          <button key={item.id} onClick={() => onCommand(`add ${item.name}`)} disabled={disabled}>
             <span>{item.name}</span>
             <strong>Rs {item.price}</strong>
           </button>

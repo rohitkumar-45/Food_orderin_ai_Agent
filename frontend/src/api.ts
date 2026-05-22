@@ -26,6 +26,10 @@ export function createSession(location: string) {
   });
 }
 
+export function getHealth() {
+  return request<{ ok: boolean; mode: string }>("/api/health");
+}
+
 export function sendCommand(sessionId: string | undefined, command: string, location: string) {
   return request<AgentResponse>("/api/agent/command", {
     method: "POST",
