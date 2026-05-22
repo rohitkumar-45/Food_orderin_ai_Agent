@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: food-ordering-ai-agent
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PROVIDER_MODE
+        value: mock
+      - key: FRONTEND_ORIGIN
+        value: "*"

@@ -1,0 +1,476 @@
+:root {
+  color: #18201f;
+  background: #f6f4ef;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: minmax(330px, 1fr) minmax(300px, 0.95fr) minmax(270px, 0.68fr);
+  gap: 18px;
+  min-height: 100vh;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.agent-panel,
+.cart-panel,
+.results-grid {
+  min-width: 0;
+}
+
+.agent-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.eyebrow {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: #0d7a5f;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  margin-top: 8px;
+  max-width: 580px;
+  font-size: clamp(2.15rem, 4.8vw, 4.25rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+h2 {
+  font-size: 1.08rem;
+}
+
+.location-field,
+.command-bar,
+.voice-console,
+.restaurant-card,
+.cart-panel,
+.messages,
+.order-card,
+.empty-state {
+  border: 1px solid #d9d4ca;
+  background: #fffdf8;
+  border-radius: 8px;
+}
+
+.location-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  min-width: 190px;
+}
+
+.location-field input,
+.command-bar input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.voice-console {
+  display: grid;
+  grid-template-columns: 82px 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+}
+
+.mic-button {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: #e94b35;
+}
+
+.mic-button.recording {
+  background: #0d7a5f;
+  box-shadow: 0 0 0 8px rgba(13, 122, 95, 0.15);
+}
+
+.mic-button:disabled {
+  cursor: not-allowed;
+  background: #a9a39b;
+}
+
+.status {
+  font-weight: 800;
+}
+
+.transcript,
+.muted {
+  margin-top: 6px;
+  color: #746d63;
+}
+
+.command-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  overflow: hidden;
+}
+
+.command-bar input {
+  padding: 16px;
+}
+
+.command-bar button,
+.checkout-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  color: white;
+  background: #18201f;
+  padding: 0 18px;
+}
+
+.command-bar button:disabled,
+.checkout-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestions button {
+  border: 1px solid #d2cbc0;
+  border-radius: 999px;
+  background: #fffdf8;
+  padding: 8px 12px;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  min-height: 150px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.messages p {
+  padding: 10px 12px;
+  border-radius: 8px;
+  line-height: 1.4;
+}
+
+.user-message {
+  align-self: flex-end;
+  max-width: 86%;
+  background: #e6f4ef;
+}
+
+.agent-message {
+  align-self: flex-start;
+  max-width: 92%;
+  background: #f1eee7;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-heading h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-heading span {
+  color: #746d63;
+  font-size: 0.92rem;
+}
+
+.restaurants,
+.cart-items {
+  display: grid;
+  gap: 12px;
+}
+
+.restaurants {
+  max-height: calc(100vh - 78px);
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.restaurant-card {
+  padding: 16px;
+}
+
+.restaurant-card.selected {
+  border-color: #0d7a5f;
+  box-shadow: inset 0 0 0 1px #0d7a5f;
+}
+
+.restaurant-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.restaurant-head button,
+.cart-item button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d9d4ca;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.provider {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.provider.swiggy {
+  color: #df5b1f;
+}
+
+.provider.zomato {
+  color: #d9233f;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 10px 0;
+  color: #534d46;
+  font-size: 0.9rem;
+}
+
+.meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.menu-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.menu-list button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid #e3ded5;
+  border-radius: 8px;
+  background: #faf8f2;
+  padding: 10px;
+  text-align: left;
+}
+
+.cart-panel {
+  align-self: start;
+  padding: 16px;
+  position: sticky;
+  top: 24px;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e7e1d8;
+}
+
+.cart-item div {
+  display: grid;
+  gap: 4px;
+}
+
+.cart-item span {
+  color: #746d63;
+  font-size: 0.88rem;
+}
+
+.checkout-button {
+  justify-content: center;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 16px;
+  border-radius: 8px;
+}
+
+.order-card,
+.empty-state {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.empty-state {
+  place-items: center;
+  min-height: 220px;
+  color: #746d63;
+  text-align: center;
+}
+
+.error {
+  border: 1px solid #e1a69a;
+  border-radius: 8px;
+  background: #fff1ee;
+  color: #9b2d19;
+  padding: 10px 12px;
+}
+
+@media (max-width: 1120px) {
+  .app-shell {
+    grid-template-columns: 1fr 360px;
+  }
+
+  .results-grid {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+}
+
+@media (max-width: 1366px) {
+  .app-shell {
+    grid-template-columns: minmax(330px, 1fr) minmax(300px, 0.9fr) minmax(260px, 0.62fr);
+    gap: 14px;
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 4vw, 3.45rem);
+  }
+
+  .voice-console {
+    grid-template-columns: 68px 1fr;
+    padding: 14px;
+  }
+
+  .mic-button {
+    width: 60px;
+    height: 60px;
+  }
+
+  .restaurant-card,
+  .cart-panel {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 1240px) {
+  .app-shell {
+    grid-template-columns: minmax(360px, 1fr) minmax(310px, 0.75fr);
+  }
+
+  .results-grid {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .restaurants {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .topbar {
+    flex-direction: column;
+  }
+
+  .location-field {
+    width: 100%;
+  }
+
+  .voice-console {
+    grid-template-columns: 64px 1fr;
+    padding: 14px;
+  }
+
+  .mic-button {
+    width: 58px;
+    height: 58px;
+  }
+
+  .command-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .command-bar button {
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .cart-panel {
+    position: static;
+  }
+
+  .restaurants {
+    grid-template-columns: 1fr;
+  }
+}
