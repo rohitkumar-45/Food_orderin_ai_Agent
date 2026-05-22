@@ -2,6 +2,8 @@
 
 Voice-first food ordering app with a React frontend, Express backend, cart workflow, checkout simulation, and Swiggy/Zomato provider adapters.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/rohitkumar-45/Food_orderin_ai_Agent)
+
 ## Important API Note
 
 Swiggy and Zomato do not provide open public consumer ordering APIs for arbitrary apps. This project uses mock provider adapters by default and keeps the integration boundary in `backend/src/providers`. To place real orders, replace the mock providers with approved partner APIs, OAuth flows, webhooks, and payment handling from the platforms.
