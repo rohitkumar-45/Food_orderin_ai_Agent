@@ -5,3 +5,9 @@ dist
 .DS_Store
 npm-debug.log*
 railway.env
+.vs
+.vscode
+Debug
+Release
+bin
+obj
